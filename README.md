@@ -1,5 +1,5 @@
 # AppSandboxQuickStart
-A Swift5 start to Apple's Sandbox support supporting documents
+A Swift5 start to Apple's Sandbox supporting documents and tab windows of WkWebView content views.
 
 This skeleton document implementation I used to test WKWebView, and its current limitations re: local html resource loading.
 
