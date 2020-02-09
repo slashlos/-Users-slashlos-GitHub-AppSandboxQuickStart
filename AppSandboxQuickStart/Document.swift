@@ -32,11 +32,22 @@ class Document: NSDocument {
 		let windowController = storyboard.instantiateController(withIdentifier: NSStoryboard.SceneIdentifier("Document Window Controller")) as! NSWindowController
 		
 		if let url = fileURL, let window = windowController.window, let cvc : ViewController = window.contentViewController as? ViewController {
-			if url.isFileURL, appDelegate.isSandboxed() != appDelegate.storeBookmark(url: url) {
-				Swift.print("Yoink, unable to sandbox \(url)")
+			if url.isFileURL {
+				if appDelegate.isSandboxed() != appDelegate.storeBookmark(url: url) {
+					Swift.print("Yoink, unable to sandbox file \(url)")
+				}
+				
+				//	really only needed for .html content
+				let baseURL = url.deletingLastPathComponent()
+				if appDelegate.isSandboxed() != appDelegate.storeBookmark(url: baseURL) {
+					Swift.print("Yoink, unable to sandbox base \(baseURL)")
+				}
+				cvc.webView.loadFileURL(url, allowingReadAccessTo: baseURL)
 			}
-
-			cvc.webView.load(URLRequest.init(url: url))
+			else
+			{
+				cvc.webView.load(URLRequest.init(url: url))
+			}
 			cvc.representedObject = url
 		}
 		self.addWindowController(windowController)

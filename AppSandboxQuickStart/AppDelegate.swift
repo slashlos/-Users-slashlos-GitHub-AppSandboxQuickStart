@@ -75,9 +75,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 			guard let window = wc.window, let cvc = window.contentViewController,
 				let webView = (cvc as? ViewController)?.webView else { return false }
 
-			if newURL.isFileURL {
-				///let baseURL = newURL.deletingPathExtension()
-				webView.loadFileURL(newURL, allowingReadAccessTo: newURL)
+			if false && newURL.isFileURL {
+				let baseURL = newURL.deletingPathExtension()
+				if isSandboxed() != storeBookmark(url: baseURL) {
+					Swift.print("Yoink, unable to sandbox \(baseURL)")
+					return false
+				}
+
+				webView.loadFileURL(newURL, allowingReadAccessTo: baseURL)
 			}
 			else
 			{
