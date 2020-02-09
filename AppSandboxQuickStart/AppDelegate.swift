@@ -243,12 +243,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 			return false
 		}
 		
-		guard !isStale, let url = restoredUrl, url.startAccessingSecurityScopedResource() else {
+		guard let url = restoredUrl else {
 			Swift.print ("? \(bookmark.key)")
 			return false
 		}
-        Swift.print ("+ \(bookmark.key)")
-		return true
+		
+		if isStale {
+			Swift.print ("≠ \(bookmark.key)")
+			return false
+		}
+		
+		let fetch = url.startAccessingSecurityScopedResource()
+        Swift.print ("\(fetch ? "+" : "-") \(bookmark.key)")
+		return fetch
 	}
 }
 
