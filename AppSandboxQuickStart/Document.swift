@@ -30,17 +30,17 @@ class Document: NSDocument {
 		// Returns the Storyboard that contains your Document window.
 		let storyboard = NSStoryboard(name: NSStoryboard.Name("Main"), bundle: nil)
 		let windowController = storyboard.instantiateController(withIdentifier: NSStoryboard.SceneIdentifier("Document Window Controller")) as! NSWindowController
-		
+		let isSandboxed = appDelegate.isSandboxed()
+
 		if let url = fileURL, let window = windowController.window, let cvc : ViewController = window.contentViewController as? ViewController {
 			if url.isFileURL {
+				var baseURL = url
+				
 				if appDelegate.isSandboxed() != appDelegate.storeBookmark(url: url) {
 					Swift.print("Yoink, unable to sandbox file \(url)")
 				}
-				
-				//	really only needed for .html content
-				let baseURL = url.deletingLastPathComponent()
-				if appDelegate.isSandboxed() != appDelegate.storeBookmark(url: baseURL) {
-					Swift.print("Yoink, unable to sandbox base \(baseURL)")
+				if isSandboxed, url.hasHTMLContent() {
+					baseURL = appDelegate.authenticateBaseURL(url)
 				}
 				cvc.webView.loadFileURL(url, allowingReadAccessTo: baseURL)
 			}

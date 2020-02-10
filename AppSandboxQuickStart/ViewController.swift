@@ -73,9 +73,10 @@ class MyWebView : WKWebView {
 	
 	// MARK: Drag and Drop - After Release
 	override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-		let window = NSApp.keyWindow ?? NSApp.mainWindow
+		let isSandboxed = appDelegate.isSandboxed()
         let pboard = sender.draggingPasteboard
         let items = pboard.pasteboardItems
+		let window = self.window
         var handled = 0
 
         for item in items! {
@@ -89,17 +90,37 @@ class MyWebView : WKWebView {
 				case .URL, .fileURL:
 
 					if let urlString = item.string(forType: type), let url = URL.init(string: urlString) {
-						if url.isFileURL, appDelegate.isSandboxed() != appDelegate.storeBookmark(url: url) {
-							Swift.print("Yoink, unable to sandbox \(url)")
-							continue
+						
+						if let _ = window?.contentViewController?.representedObject {
+							handled += (appDelegate.openURLInNewWindow(url, attachTo: window) ? 1 : 0)
 						}
+						else
+						{
+							if url.isFileURL {
+								var baseURL = url
 
-						load(URLRequest.init(url: url))
-						if let cvc : ViewController = window?.contentViewController as? ViewController {
-							cvc.representedObject = url
+								if isSandboxed != appDelegate.storeBookmark(url: url) {
+									Swift.print("Yoink, unable to sandbox file \(url)")
+									continue
+								}
+							
+								if isSandboxed, url.hasHTMLContent() {
+									baseURL = appDelegate.authenticateBaseURL(url)
+								}
+
+								///webView.load(URLRequest.init(url: url))
+								loadFileURL(url, allowingReadAccessTo: baseURL)
+							}
+							else
+							{
+								load(URLRequest.init(url: url))
+							}
+
+							if let cvc : ViewController = window?.contentViewController as? ViewController {
+								cvc.representedObject = url
+							}
+							handled += 1
 						}
-						handled += 1
-						///handled += (appDelegate.openURLInNewWindow(url, attachTo: window) ? 1 : 0)
 					}
 					break
 					

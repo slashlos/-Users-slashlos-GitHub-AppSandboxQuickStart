@@ -59,34 +59,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: Application Events
-    dynamic var disableDocumentReOpening = false
-
-    func openURLInNewWindow(_ newURL: URL, attachTo parentWindow: NSWindow? = nil) -> Bool {
-		if newURL.isFileURL, isSandboxed() != storeBookmark(url: newURL) {
-			Swift.print("Yoink, unable to sandbox \(newURL)")
+    func openURLInNewWindow(_ url: URL, attachTo parentWindow: NSWindow? = nil) -> Bool {
+		if url.isFileURL, isSandboxed() != storeBookmark(url: url) {
+			Swift.print("Yoink, unable to sandbox \(url)")
 			return false
 		}
 		
 		do {
-			let doc = try Document.init(newURL)
-			
+			let doc = try Document.init(url)
+			doc.makeWindowControllers()
 			guard let wc = doc.windowControllers.first else { return false }
 			
 			guard let window = wc.window, let cvc = window.contentViewController,
 				let webView = (cvc as? ViewController)?.webView else { return false }
 
-			if false && newURL.isFileURL {
-				let baseURL = newURL.deletingPathExtension()
-				if isSandboxed() != storeBookmark(url: baseURL) {
-					Swift.print("Yoink, unable to sandbox \(baseURL)")
-					return false
+			if url.isFileURL {
+				var baseURL = url
+				
+				//	make them authorize the entire directory
+				if isSandboxed(), url.hasHTMLContent() {
+					baseURL = authenticateBaseURL(url)
 				}
-
-				webView.loadFileURL(newURL, allowingReadAccessTo: baseURL)
+				///webView.load(URLRequest.init(url: url))
+				webView.loadFileURL(url, allowingReadAccessTo: baseURL)
 			}
 			else
 			{
-				webView.load(URLRequest.init(url: newURL))
+				webView.load(URLRequest.init(url: url))
 			}
 			if let parent = parentWindow {
 				parent.addTabbedWindow(window, ordered: .above)
@@ -114,6 +113,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	// MARK:- Sandbox Support
 	var bookmarks = [URL: Data]()
 
+    dynamic var disableDocumentReOpening = false
+	var localHTMLresourcesOnly = true
+	func authenticateBaseURL(_ url: URL) -> URL {
+		var baseURL = url
+		let openPanel = NSOpenPanel()
+		
+		openPanel.message = "Authorize access to " + baseURL.lastPathComponent
+		openPanel.prompt = "Authorize"
+		openPanel.allowsMultipleSelection = false
+		openPanel.canChooseFiles = false
+		openPanel.canChooseDirectories = true
+		openPanel.canCreateDirectories = false
+		openPanel.directoryURL = baseURL.deletingLastPathComponent()
+		
+		openPanel.begin() { (result) -> Void in
+			if (result == NSApplication.ModalResponse.OK) {
+				if let authURL = openPanel.url {
+					if self.storeBookmark(url: authURL) {
+						baseURL = authURL
+					}
+					else
+					{
+						Swift.print("Yoink, unable to sandbox base \(authURL)")
+					}
+				}
+			}
+		}
+		return baseURL
+	}
+	
 	func isSandboxed() -> Bool {
 		let bundleURL = Bundle.main.bundleURL
 		var staticCode:SecStaticCode?
@@ -180,10 +209,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	func saveBookmarks() -> Bool
 	{
 		//  Ignore saving unless configured
-		guard isSandboxed() else
-		{
-			return false
-		}
+		guard isSandboxed() else { return false }
 
 		if let path = bookmarkPath() {
 			return NSKeyedArchiver.archiveRootObject(bookmarks, toFile: path)
@@ -220,6 +246,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	}
 	
 	func findBookmark(_ url: URL) -> Data? {
+		guard isSandboxed() else { return nil }
+
 		if let data = bookmarks[url] {
 			if self.fetchBookmark((key: url, value: data)) {
 				return data
@@ -230,6 +258,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 	func fetchBookmark(_ bookmark: (key: URL, value: Data)) -> Bool
 	{
+		guard isSandboxed() else { return false }
+
 		let restoredUrl: URL?
 		var isStale = true
 		
