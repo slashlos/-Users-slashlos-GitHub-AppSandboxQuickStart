@@ -91,7 +91,7 @@ class MyWebView : WKWebView {
 
 					if let urlString = item.string(forType: type), let url = URL.init(string: urlString) {
 						
-						if let _ = window?.contentViewController?.representedObject {
+						if url.isFileURL {
 							handled += (appDelegate.openURLInNewWindow(url, attachTo: window) ? 1 : 0)
 						}
 						else
