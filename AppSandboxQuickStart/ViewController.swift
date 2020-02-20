@@ -19,6 +19,18 @@ class MyWebView : WKWebView {
     var acceptableTypes: Set<NSPasteboard.PasteboardType> { return [.URL, .fileURL, .html, .pdf, .png, .rtf, .rtfd, .tiff] }
     var filteringOptions = [NSPasteboard.ReadingOptionKey.urlReadingContentsConformToTypes:NSImage.imageTypes]
 	
+    @objc @IBAction internal func paste(_ sender: Any) {
+        let pb = NSPasteboard.general
+        guard let rawString = pb.string(forType: NSPasteboard.PasteboardType.string) else { return }
+		if let url = URL.init(string: rawString) {
+			self.load(URLRequest.init(url: url))
+		}
+		else
+		{
+			Swift.print("paste: URL? \(rawString)")
+		}
+    }
+
 	// MARK: Drag and Drop - Before Release
 	func shouldAllowDrag(_ info: NSDraggingInfo) -> Bool {
 		let pboard = info.draggingPasteboard
