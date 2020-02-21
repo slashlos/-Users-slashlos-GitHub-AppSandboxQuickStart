@@ -127,10 +127,7 @@ class MyWebView : WKWebView {
 							{
 								load(URLRequest.init(url: url))
 							}
-
-							if let cvc : ViewController = window?.contentViewController as? ViewController {
-								cvc.representedObject = url
-							}
+							
 							handled += 1
 						}
 					}
